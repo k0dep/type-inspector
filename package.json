@@ -1,7 +1,7 @@
 {
   "name": "type-inspector",
   "displayName": "TypeInspector",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "unity": "2018.3",
   "description": "Useful type and property inspector for MonoBehaviour editor",
   "keywords": [

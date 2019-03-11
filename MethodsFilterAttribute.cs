@@ -3,14 +3,14 @@ using System;
 namespace TypeInspector
 {
     /// <summary>
-    ///     Make filter of properties for selected target type
+    ///     Make filter of methods for selected target type
     /// </summary>
     [AttributeUsage(AttributeTargets.Field)]
-    public class PropertyFilterAttribute : Attribute, IFilterMethodName
+    public class MethodsFilterAttribute : Attribute, IFilterMethodName
     {
         public string MethodName { get; set; }
         
-        public PropertyFilterAttribute(string methodName)
+        public MethodsFilterAttribute(string methodName)
         {
             MethodName = methodName;
         }

@@ -6,6 +6,7 @@ Package for unity3d which allow select type and members from editor inspector.
  * Property inspector
  * GameObject component members inspector
  * Type, members and object filtering using attributes
+ * Select method on GameObject/MonoBehaviour
  
 ## Examples
 All examples place in `%PackageFolder%/Examples`. There is example scene and MonoBehaviour components with usage this package.
@@ -59,7 +60,7 @@ For start using this package add lines into `./Packages/manifest.json` like next
 ```json
 {
   "dependencies": {
-    "type-inspector": "https://github.com/k0dep/type-inspector.git#0.1.0"
+    "type-inspector": "https://github.com/k0dep/type-inspector.git#1.0.0"
   }
 }
 ```

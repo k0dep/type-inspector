@@ -29,68 +29,6 @@ namespace TypeInspector.Editor
 
             EditorGUI.EndProperty();
         }
-
-        private void DrawObjectPicker(Rect padding, SerializedProperty target, SerializedProperty property)
-        {
-            if (target.objectReferenceValue == null || (!(target.objectReferenceValue is GameObject)
-                                                        && !(target.objectReferenceValue is Component)))
-            {
-                DrawSimpleObjectPicker(padding, target, property);
-            }
-            else
-            {
-                DrawSelectableObjectPicker(padding, target, property);
-            }
-        }
-
-        private void DrawSelectableObjectPicker(Rect padding, SerializedProperty target, SerializedProperty property)
-        {
-            var objectRect = padding.DivideHorizontal(0.7f).First();
-            var selectorRect = padding.DivideHorizontal(0.7f).Last();
-
-            var value = target.objectReferenceValue;
-            
-            DrawSimpleObjectPicker(objectRect, target, property);
-
-
-            List<(string name, Object obj)> variants = null;
-
-            if (value is GameObject refGo)
-            {
-                variants = new[] {("GameObject", (Object) refGo)}
-                    .Union(SelectComponents(refGo))
-                    .ToList();
-            }
-            else if (value is Component comp)
-            {
-                variants = new[] {("GameObject", (Object) comp.gameObject)}
-                    .Union(SelectComponents(comp.gameObject))
-                    .ToList();
-            }
-            
-            var index = variants.FindLastIndex(v => v.obj == value);
-            var popupValue = EditorGUI.Popup(selectorRect, index, variants.Select(v => v.name).ToArray());
-            if (index != popupValue)
-            {
-                target.objectReferenceValue = variants[popupValue].obj;
-            }
-
-            List<(string name, Object obj)> SelectComponents(GameObject go) => go.GetComponents<Component>()
-                .Select((c, i) => ($"{i}: {c.GetType().FullName}", c as Object))
-                .ToList();
-        }
-
-        private void DrawSimpleObjectPicker(Rect padding, SerializedProperty target, SerializedProperty property)
-        {
-            var newTarget = EditorGUI.ObjectField(padding, property.displayName, target.objectReferenceValue,
-                typeof(Object), true);
-
-            if (newTarget != target.objectReferenceValue && FilterTarget(property, newTarget))
-            {
-                target.objectReferenceValue = newTarget;
-            }
-        }
-
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
             var targetSP = property.FindPropertyRelative("Target");
@@ -101,12 +39,6 @@ namespace TypeInspector.Editor
             }
             
             return base.GetPropertyHeight(property, label) * 2 + 4;
-        }
-
-        public bool FilterTarget(SerializedProperty property, Object value)
-        {
-            var filter = ReflectionHelpers.CreateFilter<Object, TargetFilterAttribute>(property);
-            return filter(value);
         }
     }
 }

@@ -4,12 +4,13 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace TypeInspector.Editor
 {
     public abstract class PropertyReferenceDrawerBase : PropertyDrawer
     {
-        protected PropertyFilterAttribute GetAttributeFilter(SerializedProperty property)
+        protected PropertyFilterAttribute GetPropertyAttributeFilter(SerializedProperty property)
         {
             return property.serializedObject.targetObject
                 .GetType()
@@ -17,12 +18,20 @@ namespace TypeInspector.Editor
                 ?.GetCustomAttribute<PropertyFilterAttribute>();
         }
         
+        protected MethodsFilterAttribute GetMethodAttributeFilter(SerializedProperty property)
+        {
+            return property.serializedObject.targetObject
+                .GetType()
+                ?.GetField(property.name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                ?.GetCustomAttribute<MethodsFilterAttribute>();
+        }
+        
         protected IEnumerable<PropertyInfo> FilterProperties(Type targetType, SerializedProperty propertySP)
         {
             var allProperties = targetType
                 .GetProperties(BindingFlags.Instance | BindingFlags.Public);
 
-            var attribute = GetAttributeFilter(propertySP);
+            var attribute = GetPropertyAttributeFilter(propertySP);
 
             if (attribute == null)
             {
@@ -32,6 +41,24 @@ namespace TypeInspector.Editor
             var filter = ReflectionHelpers.CreateFilter<PropertyInfo, PropertyFilterAttribute>(propertySP);
             
             return allProperties.Where(filter);
+        }
+        
+        protected IEnumerable<MethodInfo> FilterMethods(Type targetType, SerializedProperty propertySP)
+        {
+            var allMethods = targetType
+                .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                .Where(m => !m.IsSpecialName);;
+
+            var attribute = GetMethodAttributeFilter(propertySP);
+
+            if (attribute == null)
+            {
+                return allMethods;
+            }
+
+            var filter = ReflectionHelpers.CreateFilter<MethodInfo, MethodsFilterAttribute>(propertySP);
+            
+            return allMethods.Where(filter);
         }
 
         public static object GetTargetObjectOfProperty(SerializedProperty prop)
@@ -108,6 +135,73 @@ namespace TypeInspector.Editor
                 properties.Select(p => p.Name + " : " + p.PropertyType.FullName).ToArray());
             
             propertyNameSP.stringValue = properties.ElementAt(Mathf.Max(index, 0)).Name;
+        }
+        
+        protected void DrawObjectPicker(Rect padding, SerializedProperty target, SerializedProperty property)
+        {
+            if (target.objectReferenceValue == null || (!(target.objectReferenceValue is GameObject)
+                                                        && !(target.objectReferenceValue is Component)))
+            {
+                DrawSimpleObjectPicker(padding, target, property);
+            }
+            else
+            {
+                DrawSelectableObjectPicker(padding, target, property);
+            }
+        }
+
+        protected void DrawSelectableObjectPicker(Rect padding, SerializedProperty target, SerializedProperty property)
+        {
+            var objectRect = padding.DivideHorizontal(0.7f).First();
+            var selectorRect = padding.DivideHorizontal(0.7f).Last();
+
+            var value = target.objectReferenceValue;
+            
+            DrawSimpleObjectPicker(objectRect, target, property);
+
+
+            List<(string name, Object obj)> variants = null;
+
+            if (value is GameObject refGo)
+            {
+                variants = new[] {("GameObject", (Object) refGo)}
+                    .Union(SelectComponents(refGo))
+                    .ToList();
+            }
+            else if (value is Component comp)
+            {
+                variants = new[] {("GameObject", (Object) comp.gameObject)}
+                    .Union(SelectComponents(comp.gameObject))
+                    .ToList();
+            }
+            
+            var index = variants.FindLastIndex(v => v.obj == value);
+            var popupValue = EditorGUI.Popup(selectorRect, index, variants.Select(v => v.name).ToArray());
+            if (index != popupValue)
+            {
+                target.objectReferenceValue = variants[popupValue].obj;
+            }
+
+            List<(string name, Object obj)> SelectComponents(GameObject go) => go.GetComponents<Component>()
+                .Select((c, i) => ($"{i}: {c.GetType().FullName}", c as Object))
+                .ToList();
+        }
+
+        protected void DrawSimpleObjectPicker(Rect padding, SerializedProperty target, SerializedProperty property)
+        {
+            var newTarget = EditorGUI.ObjectField(padding, property.displayName, target.objectReferenceValue,
+                typeof(Object), true);
+
+            if (newTarget != target.objectReferenceValue && FilterTarget(property, newTarget))
+            {
+                target.objectReferenceValue = newTarget;
+            }
+        }
+        
+        public bool FilterTarget(SerializedProperty property, Object value)
+        {
+            var filter = ReflectionHelpers.CreateFilter<Object, TargetFilterAttribute>(property);
+            return filter(value);
         }
     }
 }
