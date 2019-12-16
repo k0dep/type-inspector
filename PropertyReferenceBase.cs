@@ -1,7 +1,3 @@
-
-
-#define CAN_USE_EXPR_TREE
-
 using System;
 using System.Reflection;
 
